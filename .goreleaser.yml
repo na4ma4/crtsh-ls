@@ -1,0 +1,78 @@
+env:
+  - CGO_ENABLED=0
+
+before:
+  hooks:
+    - make test
+    - go generate ./...
+    - go mod tidy
+    - go mod download
+
+builds:
+  - id: crtsh-ls
+    main: ./cmd/crtsh-ls
+    binary: crtsh-ls
+    flags:
+      - -tags=release
+      - -buildmode=default
+      - -trimpath
+      - -v
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    goarm: [ '5', '6', '7' ]
+    goos: ['linux', 'darwin', 'windows']
+    goarch: ['amd64', 'arm', 'arm64']
+    ignore:
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+
+
+archives:
+  - allow_different_binary_count: true
+
+checksum:
+  algorithm: sha256
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+nfpms:
+  -
+    id: crtsh-ls
+    package_name: crtsh-ls
+    file_name_template: "crtsh-ls_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+    builds:
+      - crtsh-ls
+    homepage: https://github.com/na4ma4/crtsh-ls
+    maintainer: na4ma4 <na4ma4@users.noreply.github.com>
+    description: crt.sh list command line tool.
+    formats:
+      - apk
+      - deb
+    bindir: /usr/bin
+
+brews:
+  -
+    name: crtsh-ls
+    tap:
+      owner: na4ma4
+      name: homebrew-tap
+    commit_author:
+      name: goreleaserbot
+      email: na4ma4@users.noreply.github.com
+    folder: Formula
+    homepage: https://github.com/na4ma4/crtsh-ls
+    description: crt.sh list command line tool.
+    test: |
+      system "#{bin}/crtsh-ls --version"
+    install: |
+      bin.install "crtsh-ls"

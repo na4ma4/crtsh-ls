@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// CertificateRecord contains the fields used in the JSON response from crt.sh queries
+// CertificateRecord contains the fields used in the JSON response from crt.sh queries.
 type CertificateRecord struct {
 	IssuerCaID        int    `json:"issuer_ca_id"`
 	IssuerName        string `json:"issuer_name"`
@@ -21,7 +22,8 @@ type CertificateRecord struct {
 	NotAfter          string `json:"not_after"`
 }
 
-// nolint: bodyclose // closed in calling function
+var errStatusNotOK = errors.New("server returned error status code")
+
 func getCertStream(domain string) (io.ReadCloser, error) {
 	client := &http.Client{
 		Timeout: viper.GetDuration("timeout"),
@@ -29,7 +31,7 @@ func getCertStream(domain string) (io.ReadCloser, error) {
 
 	baseurl, err := url.Parse(viper.GetString("crtsh.base_uri"))
 	if err != nil {
-		logrus.Panic(err)
+		logrus.Panicf("unable to parse crtsh.base_uri (%s): %s", viper.GetString("crtsh.base_uri"), err)
 	}
 
 	query := baseurl.Query()
@@ -41,12 +43,12 @@ func getCertStream(domain string) (io.ReadCloser, error) {
 
 	resp, err := client.Get(baseurl.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error retrieving cert stream: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("server returned %d http status code (%s)", resp.StatusCode, resp.Status)
+		return nil, fmt.Errorf("%w: server returned %d http status code (%s)", errStatusNotOK, resp.StatusCode, resp.Status)
 	}
 
-	return resp.Body, err
+	return resp.Body, nil
 }

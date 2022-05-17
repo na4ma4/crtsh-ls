@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -30,6 +31,7 @@ var rootCmd = &cobra.Command{
 // nolint:gochecknoinits // init is used in main for cobra
 func init() {
 	cobra.OnInitialize(configInit)
+	configDefaults()
 
 	rootCmd.PersistentFlags().StringP(
 		"format",
@@ -39,7 +41,7 @@ func init() {
 			"NameValue, MinCertID, MinEntryTimestamp, NotBefore, NotAfter.\n",
 	)
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "Debug output. ")
-	rootCmd.PersistentFlags().DurationP("timeout", "t", 50*time.Second, "Request timeout.")
+	rootCmd.PersistentFlags().DurationP("timeout", "t", viper.GetDuration("timeout"), "Request timeout.")
 	rootCmd.PersistentFlags().Bool("only-valid", false, "Only display still (date) valid certificates.")
 
 	err := multierr.Combine(
@@ -68,7 +70,7 @@ func mainCommand(cmd *cobra.Command, args []string) {
 		viper.Set("format", fmt.Sprintf("%s\n", viper.GetString("format")))
 	}
 
-	tmpl, err := template.New("").Funcs(basicFunctions).Parse(viper.GetString("format"))
+	tmpl, err := template.New("").Funcs(basicFunctions()).Parse(viper.GetString("format"))
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -86,7 +88,7 @@ func mainCommand(cmd *cobra.Command, args []string) {
 
 	for {
 		certs := []CertificateRecord{}
-		if err := dec.Decode(&certs); err == io.EOF {
+		if err := dec.Decode(&certs); errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			logrus.Debugf("Data: %s", buf)
@@ -94,21 +96,26 @@ func mainCommand(cmd *cobra.Command, args []string) {
 		}
 
 		for _, cert := range certs {
-			if viper.GetBool("only-valid") {
-				t, err := time.Parse("2006-01-02T15:04:05", cert.NotAfter)
-				if err != nil {
-					logrus.Debugf("Failed to parse time: %s (%s)", cert.NotAfter, err.Error())
-					continue
-				}
-
-				if t.Before(time.Now()) {
-					continue
-				}
-			}
-
-			if err := tmpl.Execute(os.Stdout, cert); err != nil {
-				logrus.Warnf("Unable to format line: %s", err.Error())
-			}
+			displayCert(tmpl, cert)
 		}
+	}
+}
+
+func displayCert(tmpl *template.Template, cert CertificateRecord) {
+	if viper.GetBool("only-valid") {
+		certTS, err := time.Parse("2006-01-02T15:04:05", cert.NotAfter)
+		if err != nil {
+			logrus.Debugf("Failed to parse time: %s (%s)", cert.NotAfter, err.Error())
+
+			return
+		}
+
+		if certTS.Before(time.Now()) {
+			return
+		}
+	}
+
+	if err := tmpl.Execute(os.Stdout, cert); err != nil {
+		logrus.Warnf("Unable to format line: %s", err.Error())
 	}
 }
