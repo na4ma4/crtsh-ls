@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -24,7 +25,7 @@ type CertificateRecord struct {
 
 var errStatusNotOK = errors.New("server returned error status code")
 
-func getCertStream(domain string) (io.ReadCloser, error) {
+func getCertStream(ctx context.Context, domain string) (io.ReadCloser, error) {
 	client := &http.Client{
 		Timeout: viper.GetDuration("timeout"),
 	}
@@ -41,7 +42,12 @@ func getCertStream(domain string) (io.ReadCloser, error) {
 
 	logrus.Debugf("Requesting: %s", baseurl.String())
 
-	resp, err := client.Get(baseurl.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseurl.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving cert stream: %w", err)
 	}

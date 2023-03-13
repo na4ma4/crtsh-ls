@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,7 +19,7 @@ import (
 	"go.uber.org/multierr"
 )
 
-// nolint: gochecknoglobals // cobra uses globals in main
+//nolint:gochecknoglobals // cobra uses globals in main
 var rootCmd = &cobra.Command{
 	Use:   "crtsh-ls <domain>",
 	Short: "crtsh-ls lists domains from crt.sh database",
@@ -28,7 +29,7 @@ var rootCmd = &cobra.Command{
 	Run:  mainCommand,
 }
 
-// nolint:gochecknoinits // init is used in main for cobra
+//nolint:gochecknoinits // init is used in main for cobra
 func init() {
 	cobra.OnInitialize(configInit)
 	configDefaults()
@@ -66,6 +67,9 @@ func main() {
 }
 
 func mainCommand(cmd *cobra.Command, args []string) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	if !strings.HasSuffix(viper.GetString("format"), "\n") {
 		viper.Set("format", fmt.Sprintf("%s\n", viper.GetString("format")))
 	}
@@ -75,7 +79,7 @@ func mainCommand(cmd *cobra.Command, args []string) {
 		logrus.Fatal(err)
 	}
 
-	data, err := getCertStream(args[0])
+	data, err := getCertStream(ctx, args[0])
 	if err != nil {
 		logrus.Fatal(err)
 	}
