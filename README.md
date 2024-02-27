@@ -1,6 +1,6 @@
 # crtsh-ls
 
-![ci](https://github.com/na4ma4/crtsh-ls/workflows/ci/badge.svg)
+[![CI](https://github.com/na4ma4/crtsh-ls/actions/workflows/ci.yml/badge.svg)](https://github.com/na4ma4/crtsh-ls/actions/workflows/ci.yml)
 [![GoDoc](https://godoc.org/github.com/na4ma4/crtsh-ls/?status.svg)](https://godoc.org/github.com/na4ma4/crtsh-ls)
 [![GitHub issues](https://img.shields.io/github/issues/na4ma4/crtsh-ls)](https://github.com/na4ma4/crtsh-ls/issues)
 [![GitHub forks](https://img.shields.io/github/forks/na4ma4/crtsh-ls)](https://github.com/na4ma4/crtsh-ls/network)
