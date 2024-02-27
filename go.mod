@@ -9,7 +9,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	go.uber.org/multierr v1.10.0
 	golang.org/x/text v0.8.0
-	google.golang.org/protobuf v1.29.0
+	google.golang.org/protobuf v1.29.1
 )
 
 require (
